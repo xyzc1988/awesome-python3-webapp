@@ -67,6 +67,7 @@ class ModelMetaclass(type):
         mappings = dict()
         fields = []
         primaryKey = None
+        
         for k,v in attrs.items():
             if isinstance(v,Field):
                 logging.info('found mappings: %s ==> %s' % (k,v))
@@ -110,7 +111,7 @@ class Model(dict,metaclass=ModelMetaclass):
         return getattr(self,key,None)
 
     def getValueOrDefault(self,key):
-        value = getattr(self,key)
+        value = getattr(self,key,None)
         if value is None:
             field = self.__mappings__[key]
             if field.default is not None:
@@ -120,6 +121,7 @@ class Model(dict,metaclass=ModelMetaclass):
         return value
 
     async def save(self):
+        print(self)
         args = list(map(self.getValueOrDefault,self.__fields__))
         args.append(self.getValueOrDefault(self.__primary_key__))
         rows = await execute(self.__insert__,args)
@@ -201,12 +203,25 @@ class Field(object):
         return '<%s, %s:%s>' % (self.__class__.__name__,self.column_type,self.name)
 
 class StringField(Field):
-    def __init__(self, name=None,primary_key=False,default=None,ddl='varchar(100)'):
-        super().__init__(name,primary_key,default,ddl)
+    def __init__(self, name=None, primary_key=False, default=None, ddl='varchar(100)'):
+        super().__init__(name,primary_key, default,ddl)
 
 class IntegerField(Field):
-    def __init__(self, name=None,primary_key=False,default=None,ddl='bigint'):
+    def __init__(self, name=None,primary_key=False,default=0,ddl='bigint'):
         super().__init__(name,primary_key,default,ddl)
+
+class BooleanField(Field):
+    def __init__(self,name=None,default=False):
+        super(BooleanField,self).__init__(name,False,default,'boolean')
+
+class FloatField(Field):
+    def __init__(self, name=None,primary_key=False,default=0.0):
+        super(FloatField, self).__init__(name,primary_key,default,'real')
+        
+class TextField(Field):
+    def __init__(self, name=None, default=None):
+        super().__init__(name, False, default,'text')
+        
         
 def create_args_string(num):
     L = []
@@ -221,35 +236,33 @@ def destory_pool():
         __pool.close()
         yield from __pool.wait_closed()
     
-class User(Model):
-    # 定义类的属性到列的映射：
-    id = IntegerField('id',True)
-    name = StringField('name')
-    email = StringField('email')
-    password = StringField('password')
-
-# 创建一个实例：
-u = User(id=12345, name='zhangcheng', email='test@orm.org', password='my-pwd')
-print('-------create finish-----------')
-
-#创建异步事件的句柄
-loop = asyncio.get_event_loop()
+# class User(Model):
+#     # 定义类的属性到列的映射：
+#     id = IntegerField('id',True)
+#     name = StringField('name')
+#     email = StringField('email')
+#     password = StringField('password')
 
 #创建实例
-async def test():
-    datasource = {'user':'root','password':'root','db':'test'}
-    await create_pool(loop=loop,**datasource)
-    # await u.save()
-    # r = await User.find('12345')
-    # r = await User.findNumber('count(*)','id = ?',(12345,))
-    # r = await u.remove()
-    #await u.update()
-    r = await User.findAll('id = ?',[12345],orderBy='id',limit=(0,2))
-    print(r) 
-    await destory_pool()
+# async def test():
+#     datasource = {'user':'root','password':'root','db':'test'}
+#     await create_pool(loop=loop,**datasource)
+#     # await u.save()
+#     # r = await User.find('12345')
+#     # r = await User.findNumber('count(*)','id = ?',(12345,))
+#     # r = await u.remove()
+#     #await u.update()
+#     r = await User.findAll('id = ?',[12345],orderBy='id',limit=(0,2))
+#     print(r) 
+#     await destory_pool()
 
-if __name__ == '__main__':
-    loop.run_until_complete(test())
-    loop.close()
-    # if loop.is_closed():
-    #     sys.exit(0)
+# if __name__ == '__main__':
+#     # 创建一个实例：
+#     u = User(id=12345, name='zhangcheng', email='test@orm.org', password='my-pwd')
+#     print('-------create finish-----------')
+#     #创建异步事件的句柄
+#     loop = asyncio.get_event_loop()
+#     loop.run_until_complete(test())
+#     loop.close()
+#     # if loop.is_closed():
+#     #     sys.exit(0)
