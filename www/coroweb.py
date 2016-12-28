@@ -9,7 +9,7 @@ def get(path):
     Define decorator @get('/path')
     '''
     def decorator(func):
-        @functools.warps(func)
+        @functools.wraps(func)
         def wrapper(*args,**kw):
             return func(*args,**kw)
         wrapper.__method__ = "GET"
@@ -22,7 +22,7 @@ def post(path):
     Define decorator @post('/path')
     '''
     def decorator(func):
-        @functools.warps(func)
+        @functools.wraps(func)
         def wrapper(*args,**kw):
             return func(*args,**kw)
         wrapper.__method__ = 'POST'
@@ -34,15 +34,15 @@ def get_required_kw_args(fn):
     args = []
     params = inspect.signature(fn).parameters
     for name,param in params.items():
-        if param.kid == inspect.Parameter.KEYWORD_ONLY and param.default == inspect.Parameter.empty:
+        if param.kind == inspect.Parameter.KEYWORD_ONLY and param.default == inspect.Parameter.empty:
             args.append(name)
     return tuple(args)
 
 def get_named_kw_args(fn):
     args = []
     params = inspect.signature(fn).parameters
-    for name.param in params.items():
-        if page.kind == inspect.Parameter.KEYWORD_ONLY:
+    for name,param in params.items():
+        if param.kind == inspect.Parameter.KEYWORD_ONLY:
             args.append(name)
     return tuple(args)
 
@@ -54,7 +54,7 @@ def has_named_kw_args(fn):
 
 def has_var_kw_args(fn):
     params = inspect.signature(fn).parameters
-    for name,param in params:
+    for name,param in params.items():
         if param.kind == inspect.Parameter.VAR_KEYWORD:#def foo(**d):
             return true
 
@@ -62,7 +62,7 @@ def has_request_args(fn):
     sig = inspect.signature(fn)
     params = sig.parameters
     found = False
-    for name,param in params:
+    for name,param in params.items():
         if name == 'request':
             found = True
             continue
@@ -82,6 +82,7 @@ class RequestHandler(object):
         self._required_kw_args = get_required_kw_args(fn)   # 所有没有默认值的关键字参数
 
     async def __call__(self,request):
+        print('进入RequestHandler')
         kw = None#获取参数
         if self._has_var_kw_args or self._has_named_kw_args or self._required_kw_args:
             if request.method == 'POST':
@@ -99,21 +100,42 @@ class RequestHandler(object):
                 else:
                     return web.HTTPBadRequest('Unsupported Content-Type: %s' % request.content_type)
             if request.method == 'GET':
+                #The query string in the URL, e.g., id=10
                 qs = request.query_string
+                print(qs)
                 if qs:
                     kw = dict()
+                    #parse.parse_qs解析url为字典形式,保留空格
                     for k,v in parse.parse_qs(qs,True).items():
                         kw[k] = v[0]
-            # check required kw:
-            if self._required_kw_args:
-                for name in self._required_kw_args:
-                    if not name in kw:
-                        return web.HTTPBadRequest('Missing argument %s' % name)
-            logging.info('call with args: %s' % str(kw))
-            try:
-                r = await self._func(**kw)
-            except Exception as e:
-                return dict(error=e.error, data=e.data, message=e.message)
+        if kw is None:
+            kw = dict(**request.match_info)
+        else:
+            if not self._has_var_kw_args and self._named_kw_args:
+                # remove all unamed kw:
+                copy = dict()
+                for name in self._named_kw_args:
+                    if name in kw:
+                        copy[name] = kw[name]
+                kw = copy
+            # check named arg:
+            for k, v in request.match_info.items():
+                if k in kw:
+                    logging.warning('Duplicate arg name in named arg and kw args: %s' % k)
+                kw[k] = v
+        if self._has_request_args:
+            kw['request'] = request
+        # check required kw:
+        if self._required_kw_args:
+            for name in self._required_kw_args:
+                if not name in kw:
+                    return web.HTTPBadRequest('Missing argument: %s' % name)
+        logging.info('call with args: %s' % str(kw))
+        try:
+            r = await self._func(**kw)
+            return r
+        except APIError as e:
+            return dict(error=e.error, data=e.data, message=e.message)
 
 def add_static(app):
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'static')
