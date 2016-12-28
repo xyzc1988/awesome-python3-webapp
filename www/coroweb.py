@@ -50,13 +50,13 @@ def has_named_kw_args(fn):
     params = inspect.signature(fn).parameters
     for name,param in params.items():
         if param.kind == inspect.Parameter.KEYWORD_ONLY:#def foo(*, c):
-            return true
+            return True
 
 def has_var_kw_args(fn):
     params = inspect.signature(fn).parameters
     for name,param in params.items():
         if param.kind == inspect.Parameter.VAR_KEYWORD:#def foo(**d):
-            return true
+            return True
 
 def has_request_args(fn):
     sig = inspect.signature(fn)
