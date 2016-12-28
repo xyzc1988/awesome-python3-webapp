@@ -117,10 +117,7 @@ def index(request):
 #我们就把这个coroutine扔到EventLoop中执行。
 async def init(loop):
     await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='root', db='awesome')
-    app = web.Application(loop=loop)
-    # , middlewares=[
-    #     logger_factory, response_factory
-    # ]
+    app = web.Application(loop=loop, middlewares=[logger_factory, response_factory])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
