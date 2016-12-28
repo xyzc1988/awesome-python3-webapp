@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'Michael Liao'
+__author__ = 'zhangcheng'
 
 ' url handlers '
+
+import re, time, json, logging, hashlib, base64, asyncio
 from coroweb import get,post
-from aiohttp import web
+from Models import User,Blog,Comment,next_id
 
 @get('/')
-def index(request):
-    return web.Response(body=b'<h1>Awsome</h1>',content_type='text/html')
+async def index(request):
+    users = await User.findAll()
+    return {
+        '__template__':'test.html',
+        'users' : users
+    } 
     
