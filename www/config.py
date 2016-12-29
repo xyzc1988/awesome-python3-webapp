@@ -18,7 +18,7 @@ class Dict(dict):
 
     def __getattr__(self,key):
         try:
-            return self([key])
+            return self[key]
         except KeyError:
             raise AttributeError(r"'Dict' object has no attribute '%s'" % key)
 
@@ -41,7 +41,7 @@ def toDict(d):
     D = Dict()
     for k,v in d.items():
         D[k] = toDict(v) if isinstance(v,dict) else v
-    return d
+    return D
 
 configs = config_default.configs
 
@@ -51,5 +51,7 @@ try:
 except ImportError:
     pass
 
-
 configs = toDict(configs)
+
+# print(configs)
+# print(configs.session)

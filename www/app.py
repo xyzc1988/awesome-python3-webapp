@@ -45,25 +45,28 @@ async def logger_factory(app, handler):
     async def logger(request):
         logging.info('Request: %s %s' % (request.method, request.path))
         # await asyncio.sleep(0.3)
-        return (await handler(request))
+        resp = await handler(request)
+        logging.info('logger_factory请求处理完毕,响应状态码:%s' % resp.status)
+        return resp
     return logger
 
-async def data_factory(app, handler):
-    async def parse_data(request):
-        if request.method == 'POST':
-            if request.content_type.startswith('application/json'):
-                request.__data__ = await request.json()
-                logging.info('request json: %s' % str(request.__data__))
-            elif request.content_type.startswith('application/x-www-form-urlencoded'):
-                request.__data__ = await request.post()
-                logging.info('request form: %s' % str(request.__data__))
-        return (await handler(request))
-    return parse_data
+# async def data_factory(app, handler):
+#     async def parse_data(request):
+#         if request.method == 'POST':
+#             if request.content_type.startswith('application/json'):
+#                 request.__data__ = await request.json()
+#                 logging.info('request json: %s' % str(request.__data__))
+#             elif request.content_type.startswith('application/x-www-form-urlencoded'):
+#                 request.__data__ = await request.post()
+#                 logging.info('request form: %s' % str(request.__data__))
+#         return (await handler(request))
+#     return parse_data
 
 async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler...')
         r = await handler(request)
+        logging.info("response_factory请求处理完毕,生成响应...")
         if isinstance(r, web.StreamResponse):
             return r
         if isinstance(r, bytes):
