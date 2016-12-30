@@ -141,3 +141,4 @@ async def authenticate(*,email,passwd):
     r.content_type = 'application/json'
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r
+    

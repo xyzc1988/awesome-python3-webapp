@@ -68,7 +68,7 @@ async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler...')
         r = await handler(request)
-        logging.info("response_factory请求处理完毕,生成响应...")
+        #logging.info("response_factory请求处理完毕,生成响应...")
         if isinstance(r, web.StreamResponse):
             return r
         if isinstance(r, bytes):
